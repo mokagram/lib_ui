@@ -822,6 +822,9 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
 	}
 	if (_elisionMiddle) {
 		trimmedLineEnd = _t->blockEnd(end(_t->_blocks));
+		if (style::ElisionObserved()) {
+			style::NotifyElided(_t->toString(), _lineWidth.ceil().toInt());
+		}
 	}
 
 	const auto startBlockIt = begin(_t->_blocks) + _lineStartBlock;
@@ -2124,6 +2127,9 @@ void Renderer::prepareElisionAt(
 		int(position),
 		_lineStart,
 		_localFrom + int(lineText.size())));
+	if (style::ElisionObserved()) {
+		style::NotifyElided(_t->toString(), _lineWidth.ceil().toInt());
+	}
 	lineText = lineText.mid(0, position - _localFrom) + kQEllipsis;
 	lineLength = position + kQEllipsis.size() - _lineStart;
 	_selection.to = std::min(_selection.to, position);
