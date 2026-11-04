@@ -290,6 +290,8 @@ void ScrollBar::setMoving(bool moving) {
 }
 
 void ScrollBar::paintEvent(QPaintEvent *e) {
+	// Mokagram: полос прокрутки нет, прокрутка остаётся.
+	return;
 	if (!_bar.width() && !_bar.height()) {
 		hide();
 		return;
