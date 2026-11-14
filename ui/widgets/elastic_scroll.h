@@ -332,6 +332,7 @@ private:
 		int delta,
 		crl::time timestamp);
 	void overscrollSpringStart(int side);
+	void wheelBounce(int left);
 	void overscrollSpringUpdate();
 	void updateBarState();
 	void overscrollSpringFinish();
