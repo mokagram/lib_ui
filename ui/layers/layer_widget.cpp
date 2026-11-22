@@ -80,6 +80,7 @@ public:
 	void setCacheImages(
 		QPixmap &&bodyCache,
 		QPixmap &&mainMenuCache,
+		QPoint mainMenuPosition,
 		QPixmap &&specialLayerCache,
 		QPixmap &&layerCache);
 	void removeBodyCache();
@@ -109,6 +110,7 @@ private:
 
 	QPixmap _bodyCache;
 	QPixmap _mainMenuCache;
+	QPoint _mainMenuPosition;
 	int _mainMenuCacheWidth = 0;
 	QPixmap _specialLayerCache;
 	QPixmap _layerCache;
@@ -137,10 +139,12 @@ private:
 void LayerStackWidget::BackgroundWidget::setCacheImages(
 		QPixmap &&bodyCache,
 		QPixmap &&mainMenuCache,
+		QPoint mainMenuPosition,
 		QPixmap &&specialLayerCache,
 		QPixmap &&layerCache) {
 	_bodyCache = std::move(bodyCache);
 	_mainMenuCache = std::move(mainMenuCache);
+	_mainMenuPosition = mainMenuPosition;
 	_specialLayerCache = std::move(specialLayerCache);
 	_layerCache = std::move(layerCache);
 	_specialLayerCacheBox = _specialLayerBox;
@@ -372,7 +376,14 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
 		auto shownWidth = mainMenuRight + st::boxRoundShadow.extend.right();
 		auto sourceWidth = shownWidth * style::DevicePixelRatio();
 		auto sourceRect = style::rtlrect(_mainMenuCache.width() - sourceWidth, 0, sourceWidth, _mainMenuCache.height(), _mainMenuCache.width());
-		p.drawPixmapLeft(0, 0, shownWidth, height(), width(), _mainMenuCache, sourceRect);
+		p.drawPixmapLeft(
+			_mainMenuPosition.x(),
+			_mainMenuPosition.y(),
+			shownWidth,
+			_mainMenuCache.height() / style::DevicePixelRatio(),
+			width(),
+			_mainMenuCache,
+			sourceRect);
 	}
 	if (!_repaintIssued && !_a_shown.animating()) {
 		_repaintIssued = true;
@@ -612,7 +623,12 @@ void LayerStackWidget::setCacheImages() {
 	}
 	setAttribute(Qt::WA_OpaquePaintEvent, !bodyCache.isNull());
 	updateLayerBoxes();
-	_background->setCacheImages(std::move(bodyCache), std::move(mainMenuCache), std::move(specialLayerCache), std::move(layerCache));
+	_background->setCacheImages(
+		std::move(bodyCache),
+		std::move(mainMenuCache),
+		_mainMenu ? _mainMenu->pos() : QPoint(),
+		std::move(specialLayerCache),
+		std::move(layerCache));
 }
 
 void LayerStackWidget::closeLayer(not_null<LayerWidget*> layer) {
@@ -880,7 +896,9 @@ void LayerStackWidget::showMainMenu(
 	startAnimation([&] {
 		_mainMenu = std::move(layer);
 		initChildLayer(_mainMenu);
-		_mainMenu->moveToLeft(0, 0);
+		if (!_mainMenu->property("moka-floating-main-menu").toBool()) {
+			_mainMenu->moveToLeft(0, 0);
+		}
 	}, [&] {
 		clearLayers();
 		_specialLayer.destroy();
