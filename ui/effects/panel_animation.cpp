@@ -341,7 +341,9 @@ void PanelAnimation::start() {
 
 auto PanelAnimation::computeState(float64 dt, float64 opacity) const
 -> PaintState {
-	auto &transition = anim::easeOutCirc;
+	// Mokagram: menus and panels share the same softer motion curve as
+	// screen transitions, avoiding the abrupt circular snap at the end.
+	auto &transition = anim::easeOutCubic;
 	if (dt < _alphaDuration) {
 		opacity *= transition(1., dt / _alphaDuration);
 	}
