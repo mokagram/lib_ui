@@ -317,6 +317,10 @@ struct Metrics {
 	} else if (system) {
 	} else if (overriden) {
 		font.setFamily(family);
+		// Mokagram: preserve the soft outline rendering of bundled UI faces on
+		// Windows instead of letting Qt select aggressive bitmap-like hinting.
+		font.setStyleStrategy(QFont::PreferAntialias);
+		font.setHintingPreference(QFont::PreferNoHinting);
 	} else {
 		font.setFamily("Open Sans"_q);
 	}
