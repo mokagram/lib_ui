@@ -80,6 +80,7 @@ public:
 	void setCacheImages(
 		QPixmap &&bodyCache,
 		QPixmap &&mainMenuCache,
+		bool mainMenuHasRightShadow,
 		QPixmap &&specialLayerCache,
 		QPixmap &&layerCache);
 	void removeBodyCache();
@@ -110,6 +111,7 @@ private:
 	QPixmap _bodyCache;
 	QPixmap _mainMenuCache;
 	int _mainMenuCacheWidth = 0;
+	bool _mainMenuHasRightShadow = true;
 	QPixmap _specialLayerCache;
 	QPixmap _layerCache;
 
@@ -137,10 +139,12 @@ private:
 void LayerStackWidget::BackgroundWidget::setCacheImages(
 		QPixmap &&bodyCache,
 		QPixmap &&mainMenuCache,
+		bool mainMenuHasRightShadow,
 		QPixmap &&specialLayerCache,
 		QPixmap &&layerCache) {
 	_bodyCache = std::move(bodyCache);
 	_mainMenuCache = std::move(mainMenuCache);
+	_mainMenuHasRightShadow = mainMenuHasRightShadow;
 	_specialLayerCache = std::move(specialLayerCache);
 	_layerCache = std::move(layerCache);
 	_specialLayerCacheBox = _specialLayerBox;
@@ -312,7 +316,9 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
 	auto overSpecialOpacity = (layerOpacity * specialLayerOpacity);
 	auto bg = myrtlrect(mainMenuRight, 0, width() - mainMenuRight, height());
 
-	if (_mainMenuCache.isNull() && mainMenuRight > 0) {
+	if (_mainMenuCache.isNull()
+		&& _mainMenuHasRightShadow
+		&& mainMenuRight > 0) {
 		// All cache images are taken together with their shadows,
 		// so we paint shadow only when there is no cache.
 		Ui::Shadow::paint(p, myrtlrect(0, 0, mainMenuRight, height()), width(), st::boxRoundShadow, RectPart::Right);
@@ -369,7 +375,10 @@ void LayerStackWidget::BackgroundWidget::paintEvent(QPaintEvent *e) {
 	}
 	if (!_mainMenuCache.isNull() && mainMenuRight > 0) {
 		p.setOpacity(1.);
-		auto shownWidth = mainMenuRight + st::boxRoundShadow.extend.right();
+		const auto shadowRight = _mainMenuHasRightShadow
+			? st::boxRoundShadow.extend.right()
+			: 0;
+		auto shownWidth = mainMenuRight + shadowRight;
 		auto sourceWidth = shownWidth * style::DevicePixelRatio();
 		auto sourceRect = style::rtlrect(_mainMenuCache.width() - sourceWidth, 0, sourceWidth, _mainMenuCache.height(), _mainMenuCache.width());
 		p.drawPixmapLeft(0, 0, shownWidth, height(), width(), _mainMenuCache, sourceRect);
@@ -584,6 +593,7 @@ void LayerStackWidget::setStyleOverrides(
 
 void LayerStackWidget::setCacheImages() {
 	auto bodyCache = QPixmap(), mainMenuCache = QPixmap();
+	auto mainMenuHasRightShadow = true;
 	auto specialLayerCache = QPixmap();
 	if (_specialLayer) {
 		Ui::SendPendingMoveResizeEvents(_specialLayer);
@@ -608,11 +618,22 @@ void LayerStackWidget::setCacheImages() {
 		hideChildren();
 		bodyCache = Ui::GrabWidget(parentWidget());
 		showChildren();
-		mainMenuCache = Ui::Shadow::grab(_mainMenu, st::boxRoundShadow, RectPart::Right);
+		// Mokagram: the slide-out menu already owns its rounded right edge.
+		// Do not add a second dark shadow beneath transparent corner pixels.
+		const auto flatMenu = _mainMenu->property("moka-main-menu").toBool();
+		mainMenuHasRightShadow = !flatMenu;
+		mainMenuCache = flatMenu
+			? Ui::GrabWidget(_mainMenu)
+			: Ui::Shadow::grab(_mainMenu, st::boxRoundShadow, RectPart::Right);
 	}
 	setAttribute(Qt::WA_OpaquePaintEvent, !bodyCache.isNull());
 	updateLayerBoxes();
-	_background->setCacheImages(std::move(bodyCache), std::move(mainMenuCache), std::move(specialLayerCache), std::move(layerCache));
+	_background->setCacheImages(
+		std::move(bodyCache),
+		std::move(mainMenuCache),
+		mainMenuHasRightShadow,
+		std::move(specialLayerCache),
+		std::move(layerCache));
 }
 
 void LayerStackWidget::closeLayer(not_null<LayerWidget*> layer) {
