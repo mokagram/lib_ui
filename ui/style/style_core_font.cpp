@@ -336,9 +336,13 @@ struct Metrics {
 			int(base::SafeRound(metrics.pixelSize * kSubSuperMultiplier)));
 	}
 	if (!monospace) {
+		const auto bundledMokagramFont = (family == Custom);
+		// Mokagram: Adwaita Sans is a variable family. Use calmer UI weights
+		// than Qt's default Normal/DemiBold pair, which looks too heavy at
+		// Telegram's small pixel sizes on Windows.
 		font.setWeight((flags & FontFlag::Bold)
-			? QFont::DemiBold
-			: QFont::Normal);
+			? (bundledMokagramFont ? QFont::Medium : QFont::DemiBold)
+			: (bundledMokagramFont ? QFont::Light : QFont::Normal));
 		if (font.bold()) {
 			const auto style = QFontInfo(font).styleName();
 			if (!style.isEmpty() && !style.startsWith(
