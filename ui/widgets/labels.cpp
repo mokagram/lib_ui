@@ -1158,6 +1158,7 @@ DividerLabel::DividerLabel(
 	RectParts parts)
 : PaddingWrap(parent, std::move(child), padding)
 , _background(this, st::boxDividerHeight, st, parts) {
+	setProperty("moka-break", true);
 	setNaturalWidth(-1);
 }
 
