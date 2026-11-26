@@ -3020,10 +3020,15 @@ void InputField::paintEvent(QPaintEvent *e) {
 		p.save();
 		p.setClipRect(r);
 
-		auto placeholderTop = anim::interpolate(0, _st.placeholderShift, placeholderShiftDegree);
-		auto placeholderLeft = anim::interpolate(0, _st.placeholderShiftLeft, placeholderShiftDegree);
-
-		QRect r(rect().marginsRemoved(margins));
+		QRectF r(rect().marginsRemoved(margins));
+		const auto restingTop = (_st.borderRadius > 0 && (_st.border || _st.borderActive))
+			? height() / 2. - _placeholderPath.boundingRect().center().y() - r.top()
+			: 0.;
+		const auto placeholderTop = anim::interpolate(
+			restingTop,
+			float64(_st.placeholderShift),
+			placeholderShiftDegree);
+		const auto placeholderLeft = anim::interpolate(0, _st.placeholderShiftLeft, placeholderShiftDegree);
 		r.translate(placeholderLeft, placeholderTop);
 		if (style::RightToLeft()) r.moveLeft(width() - r.left() - r.width());
 
