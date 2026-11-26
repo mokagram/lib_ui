@@ -16,6 +16,8 @@
 #include <crl/crl_async.h>
 #include <lz4.h>
 
+#include <cmath>
+
 class QPainter;
 
 namespace Ui::CustomEmoji {
@@ -44,18 +46,26 @@ void PaintScaledImage(
 		const Context &context) {
 	static QImage PaintCache;
 	const auto cache = context.internal.colorized ? &PaintCache : nullptr;
+	const auto shot = (ShotScale() > 1);
+	// Screenshot tinting must use the output painter's pixel density.
+	const auto ratio = shot
+		? std::max(style::DevicePixelRatio(),
+			int(std::ceil(p.device()->devicePixelRatioF())))
+		: style::DevicePixelRatio();
 	auto q = std::optional<QPainter>();
 	if (cache) {
-		const auto ratio = style::DevicePixelRatio();
 		if (cache->width() < target.width() * ratio
 			|| cache->height() < target.height() * ratio) {
 			*cache = QImage(
 				std::max(cache->width(), target.width() * ratio),
 				std::max(cache->height(), target.height() * ratio),
 				QImage::Format_ARGB32_Premultiplied);
-			cache->setDevicePixelRatio(ratio);
 		}
+		cache->setDevicePixelRatio(ratio);
 		q.emplace(cache);
+		if (shot) {
+			q->setRenderHint(QPainter::SmoothPixmapTransform);
+		}
 		q->setCompositionMode(QPainter::CompositionMode_Source);
 		if (context.scaled) {
 			q->fillRect(QRect(QPoint(), target.size()), Qt::transparent);
@@ -84,7 +94,6 @@ void PaintScaledImage(
 	}
 	if (q) {
 		q.reset();
-		const auto ratio = style::DevicePixelRatio();
 		const auto source = QRect(QPoint(), target.size() * ratio);
 		const auto &color = context.textColor;
 		style::colorizeImage(*cache, color, cache, source, {}, true);
